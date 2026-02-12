@@ -1,0 +1,149 @@
+# =============================================================================
+# SFML Monitor — Lernfortschritt (Multi-KPI Übersicht)
+# =============================================================================
+# Benötigte Sensoren: sensor.sfml_lernfortschritt
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "SFML Lernfortschritt"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 40d
+apex_config:
+  chart:
+    height: 320px
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - seriesName: "7-Tage Ø Genauigkeit"
+      min: 0
+      max: 100
+      tickAmount: 5
+      labels:
+        formatter: |
+          EVAL:function(val) { return val + '%'; }
+      title:
+        text: "Genauigkeit %"
+        style:
+          color: "#4CAF50"
+          fontSize: "12px"
+    - seriesName: "Genauigkeit (tgl.)"
+      show: false
+    - seriesName: "7-Tage Ø Fehler"
+      opposite: true
+      min: 0
+      max: 12
+      tickAmount: 4
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(1) + ' kWh'; }
+      title:
+        text: "Fehler kWh"
+        style:
+          color: "#F44336"
+          fontSize: "12px"
+    - seriesName: "Fehler (tgl.)"
+      show: false
+  annotations:
+    yaxis:
+      - y: 80
+        yAxisIndex: 0
+        borderColor: "#4CAF5050"
+        strokeDashArray: 6
+        label:
+          text: "Ziel 80%"
+          position: "front"
+          style:
+            color: "#4CAF50"
+            background: "transparent"
+            fontSize: "10px"
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val, { seriesIndex }) {
+          if (val === null || val === undefined) return '';
+          if (seriesIndex <= 1) return val.toFixed(1) + '%';
+          return val.toFixed(2) + ' kWh';
+        }
+series:
+  - entity: sensor.sfml_lernfortschritt
+    name: "7-Tage Ø Genauigkeit"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        var win = data.slice(Math.max(0, i - 6), i + 1);
+        var avg = win.reduce(function(s, x) { return s + x.accuracy; }, 0) / win.length;
+        return [new Date(d.date).getTime(), Math.round(avg * 10) / 10];
+      });
+    color_threshold:
+      - value: 0
+        color: "#F44336"
+      - value: 50
+        color: "#FF9800"
+      - value: 70
+        color: "#4CAF50"
+    stroke_width: 3
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+      header_color_threshold: true
+
+  - entity: sensor.sfml_lernfortschritt
+    name: "Genauigkeit (tgl.)"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), d.accuracy];
+      });
+    color: "#81C784"
+    stroke_width: 1
+    type: line
+    curve: stepline
+    opacity: 0.5
+    show:
+      in_header: false
+
+  - entity: sensor.sfml_lernfortschritt
+    name: "7-Tage Ø Fehler"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        var win = data.slice(Math.max(0, i - 6), i + 1);
+        var vals = win.filter(function(x) { return x.error !== null; });
+        if (vals.length === 0) return [new Date(d.date).getTime(), null];
+        var avg = vals.reduce(function(s, x) { return s + x.error; }, 0) / vals.length;
+        return [new Date(d.date).getTime(), Math.round(avg * 100) / 100];
+      });
+    color_threshold:
+      - value: 0
+        color: "#4CAF50"
+      - value: 2
+        color: "#FF9800"
+      - value: 5
+        color: "#F44336"
+    stroke_width: 3
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+      header_color_threshold: true
+
+  - entity: sensor.sfml_lernfortschritt
+    name: "Fehler (tgl.)"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(function(d) { return d.error !== null; }).map(function(d) {
+        return [new Date(d.date).getTime(), d.error];
+      });
+    color: "#EF9A9A"
+    stroke_width: 1
+    type: area
+    curve: stepline
+    opacity: 0.15
+    show:
+      in_header: false

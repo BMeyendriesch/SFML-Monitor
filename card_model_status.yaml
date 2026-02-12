@@ -1,0 +1,41 @@
+# =============================================================================
+# SFML Monitor — AI-Modell & Drift Status (Entities Card)
+# =============================================================================
+type: entities
+title: "AI-Modell & Drift Status"
+entities:
+  - entity: sensor.sfml_modell_status
+    name: "Modell-Typ"
+    icon: mdi:brain
+  - type: attribute
+    entity: sensor.sfml_modell_status
+    attribute: samples
+    name: "Trainings-Samples"
+    icon: mdi:database
+    suffix: " Samples"
+  - type: attribute
+    entity: sensor.sfml_modell_status
+    attribute: r2
+    name: "R² Score"
+    icon: mdi:chart-bell-curve
+    suffix: "%"
+  - type: attribute
+    entity: sensor.sfml_modell_status
+    attribute: rmse
+    name: "RMSE"
+    icon: mdi:sigma
+  - type: attribute
+    entity: sensor.sfml_modell_status
+    attribute: mae_30d
+    name: "MAE (30 Tage)"
+    icon: mdi:chart-line-variant
+    suffix: " kWh"
+  - type: attribute
+    entity: sensor.sfml_modell_status
+    attribute: bias_30d
+    name: "Bias (30 Tage)"
+    icon: mdi:swap-vertical
+    suffix: " kWh"
+  - entity: sensor.sfml_drift_events
+    name: "Drift Events"
+    icon: mdi:alert-circle-outline

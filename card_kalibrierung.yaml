@@ -1,0 +1,93 @@
+# =============================================================================
+# SFML Monitor — Kalibrierungsfaktor-Konvergenz pro Panelgruppe
+# =============================================================================
+# Zeigt, wie die Physics-Kalibrierungsfaktoren über die Zeit gegen 1.0
+# konvergieren. Faktor = Actual/Predicted — 1.0 = perfekte Kalibrierung.
+#
+# Benötigte Sensoren: sensor.sfml_kalibrierung_verlauf
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Kalibrierungsfaktoren"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 40d
+apex_config:
+  chart:
+    height: 280px
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - min: 0
+      max: 4
+      tickAmount: 4
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(1); }
+      title:
+        text: "Kalibrierungsfaktor"
+        style:
+          fontSize: "12px"
+  annotations:
+    yaxis:
+      - y: 1.0
+        borderColor: "#4CAF50"
+        strokeDashArray: 0
+        borderWidth: 2
+        label:
+          text: "Optimal (1.0)"
+          position: "front"
+          style:
+            color: "#4CAF50"
+            background: "transparent"
+            fontSize: "10px"
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(3);
+        }
+series:
+  - entity: sensor.sfml_kalibrierung_verlauf
+    name: "Gruppe 1"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.group_name === 'Gruppe 1')
+                 .map(d => [new Date(d.date).getTime(), d.factor]);
+    color: "#42A5F5"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+
+  - entity: sensor.sfml_kalibrierung_verlauf
+    name: "Gruppe 2"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.group_name === 'Gruppe 2')
+                 .map(d => [new Date(d.date).getTime(), d.factor]);
+    color: "#FF9800"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+
+  - entity: sensor.sfml_kalibrierung_verlauf
+    name: "Gruppe 3"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.group_name === 'Gruppe 3')
+                 .map(d => [new Date(d.date).getTime(), d.factor]);
+    color: "#AB47BC"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw

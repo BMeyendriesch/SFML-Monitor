@@ -1,0 +1,60 @@
+# =============================================================================
+# SFML Monitor — Methoden & Kalibrierung (Bar Charts)
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Methoden-Vergleich & Kalibrierung"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 1d
+apex_config:
+  chart:
+    height: 320px
+    type: bar
+  plotOptions:
+    bar:
+      columnWidth: "60%"
+  yaxis:
+    - seriesName: "Physics MAE"
+      title:
+        text: "MAE (kWh)"
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(2); }
+    - seriesName: "Kalibrierung"
+      opposite: true
+      title:
+        text: "Faktor"
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(2); }
+  tooltip:
+    y:
+      formatter: |
+        EVAL:function(val) { return val.toFixed(3); }
+series:
+  - entity: sensor.sfml_methoden_performance
+    name: "Physics MAE"
+    type: column
+    color: "#9E9E9E"
+    show:
+      in_header: raw
+    data_generator: |
+      var data = JSON.parse(entity.attributes.method_data);
+      return data.map(d => [d.bucket, d.physics_mae]);
+  - entity: sensor.sfml_methoden_performance
+    name: "AI MAE"
+    type: column
+    color: "#2196F3"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.method_data);
+      return data.map(d => [d.bucket, d.ai_mae]);
+  - entity: sensor.sfml_methoden_performance
+    name: "Kalibrierung"
+    type: column
+    color: "#FF9800"
+    yaxis_id: "Kalibrierung"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.calibration_data);
+      return data.map(d => [d.group, d.factor]);

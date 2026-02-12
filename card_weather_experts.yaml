@@ -1,0 +1,36 @@
+# =============================================================================
+# SFML Monitor — Wetter-Experten Performance (Horizontal Bar Chart)
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Wetter-Experten Gewichtung"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 1d
+apex_config:
+  chart:
+    height: 250px
+    type: bar
+  plotOptions:
+    bar:
+      horizontal: true
+      barHeight: "60%"
+  xaxis:
+    labels:
+      formatter: |
+        EVAL:function(val) { return val + '%'; }
+  tooltip:
+    y:
+      formatter: |
+        EVAL:function(val) { return val.toFixed(1) + '%'; }
+series:
+  - entity: sensor.sfml_wetter_experten
+    name: "Gewichtung"
+    type: column
+    color: "#2196F3"
+    show:
+      in_header: raw
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(d => [d.expert, d.weight]);

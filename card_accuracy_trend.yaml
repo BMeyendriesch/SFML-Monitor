@@ -1,0 +1,46 @@
+# =============================================================================
+# SFML Monitor — Prognosegenauigkeit Trend (Line Chart)
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Prognosegenauigkeit"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 30d
+apex_config:
+  chart:
+    height: 280px
+  yaxis:
+    - min: 0
+      max: 100
+      tickAmount: 5
+      labels:
+        formatter: |
+          EVAL:function(val) { return val + '%'; }
+  annotations:
+    yaxis:
+      - y: 100
+        borderColor: "#4CAF50"
+        strokeDashArray: 4
+        label:
+          text: "100%"
+          style:
+            color: "#4CAF50"
+            background: "transparent"
+  tooltip:
+    y:
+      formatter: |
+        EVAL:function(val) { return val.toFixed(1) + '%'; }
+series:
+  - entity: sensor.sfml_tagliche_genauigkeit
+    name: "Ø Genauigkeit"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(d => [new Date(d.date).getTime(), d.accuracy]);
+    color: "#4CAF50"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw

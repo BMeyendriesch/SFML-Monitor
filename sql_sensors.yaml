@@ -1,0 +1,193 @@
+# =============================================================================
+# SFML Monitor — SQL-Sensoren
+# =============================================================================
+# Einbinden in configuration.yaml:
+#   sql: !include sql_sensors.yaml
+#
+# Voraussetzung: HA SQL Integration ist konfiguriert.
+# =============================================================================
+
+- name: "SFML Tägliche Genauigkeit"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(acc), 1) as state,
+      json_group_array(json_object(
+        'date', date,
+        'accuracy', acc,
+        'predicted', predicted,
+        'actual', actual
+      )) as chart_data
+    FROM (
+      SELECT
+        date,
+        ROUND(MIN(accuracy_percent, 100), 1) as acc,
+        ROUND(predicted_total_kwh, 2) as predicted,
+        ROUND(actual_total_kwh, 2) as actual
+      FROM daily_summaries
+      WHERE actual_total_kwh > 0.5
+      ORDER BY date DESC
+      LIMIT 30
+    );
+  column: "state"
+  unit_of_measurement: "%"
+  unique_id: sfml_daily_accuracy
+
+- name: "SFML Modell Status"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      m.active_model as state,
+      m.training_samples as samples,
+      ROUND(m.accuracy * 100, 1) as r2,
+      ROUND(m.rmse, 4) as rmse,
+      ROUND(d.mae, 4) as mae_30d,
+      ROUND(d.bias, 4) as bias_30d,
+      m.last_trained
+    FROM ai_learned_weights_meta m
+    LEFT JOIN (
+      SELECT mae, bias FROM drift_metrics_rolling
+      WHERE scope = 'global' AND window_days = 30 AND season IS NULL
+      ORDER BY calculated_at DESC
+      LIMIT 1
+    ) d ON 1=1
+    WHERE m.id = 1;
+  column: "state"
+  unique_id: sfml_model_status
+
+- name: "SFML Drift Events"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      (SELECT COUNT(*) FROM drift_events) as state,
+      json_group_array(json_object(
+        'date', event_date,
+        'scope', scope,
+        'type', drift_type,
+        'severity', severity,
+        'value', ROUND(metric_value, 4),
+        'description', description
+      )) as events_data
+    FROM (
+      SELECT * FROM drift_events
+      ORDER BY event_date DESC, id DESC
+      LIMIT 10
+    );
+  column: "state"
+  unique_id: sfml_drift_events
+
+- name: "SFML Wetter Experten"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      (SELECT expert_name FROM (
+        SELECT expert_name, AVG(weight) as avg_w
+        FROM weather_expert_weights
+        GROUP BY expert_name
+        ORDER BY avg_w DESC
+        LIMIT 1
+      )) as state,
+      json_group_array(json_object(
+        'expert', expert_name,
+        'weight', ROUND(avg_w * 100, 1)
+      )) as chart_data
+    FROM (
+      SELECT expert_name, AVG(weight) as avg_w
+      FROM weather_expert_weights
+      GROUP BY expert_name
+      ORDER BY avg_w DESC
+    );
+  column: "state"
+  unique_id: sfml_weather_experts
+
+- name: "SFML Methoden Performance"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      CASE WHEN AVG(ai_mae) < AVG(physics_mae) THEN 'AI+Physics' ELSE 'Physics' END as state,
+      json_group_array(json_object(
+        'bucket', cloud_bucket || '/' || hour_bucket,
+        'physics_mae', ROUND(physics_mae, 3),
+        'ai_mae', ROUND(ai_mae, 3),
+        'samples', sample_count
+      )) as method_data,
+      (SELECT json_group_array(json_object(
+        'group', group_name,
+        'factor', ROUND(global_factor, 4),
+        'confidence', ROUND(confidence, 3),
+        'samples', sample_count
+      )) FROM physics_calibration_groups) as calibration_data
+    FROM method_performance_learning
+    WHERE season IS NULL AND sample_count > 0;
+  column: "state"
+  unique_id: sfml_method_performance
+
+- name: "SFML Lernfortschritt"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(acc), 1) as state,
+      json_group_array(json_object(
+        'date', date,
+        'accuracy', acc,
+        'error', err
+      )) as chart_data
+    FROM (
+      SELECT
+        date,
+        ROUND(MIN(accuracy_percent, 100), 1) as acc,
+        ROUND(ABS(error_kwh), 2) as err
+      FROM daily_summaries
+      WHERE actual_total_kwh > 0.5
+      ORDER BY date
+    );
+  column: "state"
+  unit_of_measurement: "%"
+  unique_id: sfml_lernfortschritt
+
+- name: "SFML Kalibrierung Verlauf"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND((SELECT AVG(global_factor) FROM physics_calibration_groups), 3) as state,
+      json_group_array(json_object(
+        'date', date,
+        'group_name', group_name,
+        'factor', factor
+      )) as chart_data
+    FROM (
+      SELECT
+        date,
+        group_name,
+        ROUND(AVG(avg_ratio), 3) as factor
+      FROM physics_calibration_history
+      GROUP BY date, group_name
+      ORDER BY date, group_name
+    );
+  column: "state"
+  unique_id: sfml_kalibrierung_verlauf
+
+- name: "SFML Experten Lernen"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      (SELECT expert_name FROM (
+        SELECT expert_name, AVG(weight_after) as avg_w
+        FROM weather_expert_learning
+        GROUP BY expert_name
+        ORDER BY avg_w DESC
+        LIMIT 1
+      )) as state,
+      json_group_array(json_object(
+        'date', date,
+        'expert', expert_name,
+        'weight', ROUND(avg_weight * 100, 1)
+      )) as chart_data
+    FROM (
+      SELECT date, expert_name, AVG(weight_after) as avg_weight
+      FROM weather_expert_learning
+      GROUP BY date, expert_name
+      ORDER BY date, expert_name
+    );
+  column: "state"
+  unique_id: sfml_experten_lernen

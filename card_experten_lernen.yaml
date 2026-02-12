@@ -1,0 +1,105 @@
+# =============================================================================
+# SFML Monitor — Wetter-Experten Gewichtsentwicklung
+# =============================================================================
+# Zeigt, wie sich die Gewichtung der Wetterquellen über die Zeit
+# verändert. Höheres Gewicht = höheres Vertrauen des Systems.
+# Gewichte gemittelt über alle Wolkentypen.
+#
+# Benötigte Sensoren: sensor.sfml_experten_lernen
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Wetter-Experten Lernen"
+  show: true
+  show_states: false
+graph_span: 40d
+apex_config:
+  chart:
+    height: 280px
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - min: 0
+      max: 50
+      tickAmount: 5
+      labels:
+        formatter: |
+          EVAL:function(val) { return val + '%'; }
+      title:
+        text: "Gewichtung %"
+        style:
+          fontSize: "12px"
+  annotations:
+    yaxis:
+      - y: 25
+        borderColor: "#9E9E9E40"
+        strokeDashArray: 6
+        label:
+          text: "Gleichverteilung (25%)"
+          position: "front"
+          style:
+            color: "#9E9E9E"
+            background: "transparent"
+            fontSize: "10px"
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(1) + '%';
+        }
+series:
+  - entity: sensor.sfml_experten_lernen
+    name: "ECMWF Layers"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.expert === 'ecmwf_layers')
+                 .map(d => [new Date(d.date).getTime(), d.weight]);
+    color: "#4CAF50"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: false
+
+  - entity: sensor.sfml_experten_lernen
+    name: "Bright Sky"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.expert === 'bright_sky')
+                 .map(d => [new Date(d.date).getTime(), d.weight]);
+    color: "#FF9800"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: false
+
+  - entity: sensor.sfml_experten_lernen
+    name: "Open Meteo"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.expert === 'open_meteo')
+                 .map(d => [new Date(d.date).getTime(), d.weight]);
+    color: "#42A5F5"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: false
+
+  - entity: sensor.sfml_experten_lernen
+    name: "wttr.in"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(d => d.expert === 'wttr_in')
+                 .map(d => [new Date(d.date).getTime(), d.weight]);
+    color: "#F44336"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: false

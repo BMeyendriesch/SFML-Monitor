@@ -1,0 +1,38 @@
+# =============================================================================
+# SFML Monitor — Vorhersage vs. Realität (Grouped Bar Chart)
+# =============================================================================
+type: custom:apexcharts-card
+header:
+  title: "Vorhersage vs. Realität"
+  show: true
+graph_span: 30d
+apex_config:
+  chart:
+    height: 280px
+    type: bar
+  plotOptions:
+    bar:
+      columnWidth: "70%"
+  yaxis:
+    - labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(1) + ' kWh'; }
+  tooltip:
+    y:
+      formatter: |
+        EVAL:function(val) { return val.toFixed(2) + ' kWh'; }
+series:
+  - entity: sensor.sfml_tagliche_genauigkeit
+    name: "Vorhersage"
+    type: column
+    color: "#9E9E9E"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(d => [new Date(d.date).getTime(), d.predicted]);
+  - entity: sensor.sfml_tagliche_genauigkeit
+    name: "Realität"
+    type: column
+    color: "#FF9800"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(d => [new Date(d.date).getTime(), d.actual]);
