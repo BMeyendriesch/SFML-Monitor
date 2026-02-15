@@ -1,0 +1,85 @@
+# =============================================================================
+# SFML Monitor — Prognosegenauigkeit pro Panelgruppe
+# =============================================================================
+# Vergleicht die tägliche Prognosegenauigkeit der drei Panelgruppen.
+# Zeigt, für welche Gruppen das System die besten Vorhersagen liefert
+# und wo noch Lernbedarf besteht.
+#
+# Benötigte Sensoren: sensor.sfml_gruppen_genauigkeit
+#   → state = Ø Genauigkeit aller Gruppen (%)
+#   → attribute chart_data = JSON mit date/group/accuracy/hours
+# =============================================================================
+type: custom:apexcharts-card
+grid_options:
+  columns: full
+header:
+  title: "Prognose-Treffsicherheit pro Panelgruppe"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 40d
+apex_config:
+  chart:
+    height: 300px
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - min: 0
+      max: 100
+      tickAmount: 5
+      labels:
+        formatter: |
+          EVAL:function(val) { return val + '%'; }
+      title:
+        text: "Genauigkeit %"
+        style:
+          fontSize: "12px"
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(1) + '%';
+        }
+series:
+  - entity: sensor.sfml_gruppen_genauigkeit
+    name: "Gruppe 1"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(function(d) { return d.group === 'Gruppe 1'; })
+                 .map(function(d) { return [new Date(d.date).getTime(), d.accuracy]; });
+    color: "#42A5F5"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+
+  - entity: sensor.sfml_gruppen_genauigkeit
+    name: "Gruppe 2"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(function(d) { return d.group === 'Gruppe 2'; })
+                 .map(function(d) { return [new Date(d.date).getTime(), d.accuracy]; });
+    color: "#FF9800"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw
+
+  - entity: sensor.sfml_gruppen_genauigkeit
+    name: "Gruppe 3"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.filter(function(d) { return d.group === 'Gruppe 3'; })
+                 .map(function(d) { return [new Date(d.date).getTime(), d.accuracy]; });
+    color: "#AB47BC"
+    stroke_width: 2
+    type: line
+    curve: smooth
+    show:
+      in_header: raw

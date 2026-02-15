@@ -131,7 +131,12 @@
         'date', date,
         'accuracy', acc,
         'error', err
-      )) as chart_data
+      )) as chart_data,
+      (SELECT ROUND(AVG(e), 2) FROM (
+        SELECT ABS(error_kwh) as e FROM daily_summaries
+        WHERE actual_total_kwh > 0.5 AND error_kwh IS NOT NULL
+        ORDER BY date DESC LIMIT 7
+      )) as error_7d
     FROM (
       SELECT
         date,
@@ -166,6 +171,105 @@
     );
   column: "state"
   unique_id: sfml_kalibrierung_verlauf
+
+- name: "SFML Fehlermetriken"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(abs_err), 2) as state,
+      json_group_array(json_object(
+        'date', date,
+        'error', abs_err,
+        'predicted', predicted,
+        'actual', actual
+      )) as chart_data
+    FROM (
+      SELECT
+        date,
+        ROUND(ABS(error_kwh), 3) as abs_err,
+        ROUND(predicted_total_kwh, 2) as predicted,
+        ROUND(actual_total_kwh, 2) as actual
+      FROM daily_summaries
+      WHERE actual_total_kwh > 0.5
+        AND error_kwh IS NOT NULL
+      ORDER BY date
+    );
+  column: "state"
+  unit_of_measurement: "kWh"
+  unique_id: sfml_fehlermetriken
+
+- name: "SFML Drift Timeline"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      COUNT(*) as state,
+      json_group_array(json_object(
+        'date', event_date,
+        'scope', scope,
+        'type', drift_type,
+        'severity', severity,
+        'value', ROUND(metric_value, 3),
+        'threshold', ROUND(threshold_value, 3),
+        'action', response_action,
+        'desc', description
+      )) as chart_data
+    FROM (
+      SELECT *
+      FROM drift_events
+      ORDER BY event_date, id
+    );
+  column: "state"
+  unique_id: sfml_drift_timeline
+
+- name: "SFML Ensemble Gewichte"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      'LSTM/Ridge' as state,
+      json_group_array(json_object(
+        'group', group_name,
+        'bucket', cloud_bucket || '/' || hour_bucket,
+        'lstm_w', ROUND(lstm_weight * 100, 1),
+        'ridge_w', ROUND(ridge_weight * 100, 1),
+        'lstm_mae', ROUND(lstm_mae, 4),
+        'ridge_mae', ROUND(ridge_mae, 4),
+        'samples', sample_count
+      )) as chart_data
+    FROM ensemble_group_weights
+    WHERE season IS NULL
+    ORDER BY group_name, cloud_bucket, hour_bucket;
+  column: "state"
+  unique_id: sfml_ensemble_gewichte
+
+- name: "SFML Gruppen Genauigkeit"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(avg_acc), 1) as state,
+      json_group_array(json_object(
+        'date', target_date,
+        'group', group_name,
+        'accuracy', avg_acc,
+        'hours', hours
+      )) as chart_data
+    FROM (
+      SELECT
+        hp.target_date,
+        ppg.group_name,
+        ROUND(AVG(
+          (1.0 - MIN(ABS(ppg.prediction_kwh - ppg.actual_kwh) / ppg.actual_kwh, 1.0)) * 100
+        ), 1) as avg_acc,
+        COUNT(*) as hours
+      FROM prediction_panel_groups ppg
+      JOIN hourly_predictions hp ON ppg.prediction_id = hp.prediction_id
+      WHERE hp.is_production_hour = 1
+        AND ppg.actual_kwh > 0.01
+      GROUP BY hp.target_date, ppg.group_name
+      ORDER BY hp.target_date, ppg.group_name
+    );
+  column: "state"
+  unit_of_measurement: "%"
+  unique_id: sfml_gruppen_genauigkeit
 
 - name: "SFML Experten Lernen"
   db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"

@@ -2,8 +2,13 @@
 # SFML Monitor — Lernfortschritt (Multi-KPI Übersicht)
 # =============================================================================
 # Benötigte Sensoren: sensor.sfml_lernfortschritt
+#   → state = Ø Genauigkeit (67.5)
+#   → attribute chart_data = JSON mit date/accuracy/error
+#   → attribute error_7d = 7-Tage Ø Fehler (2.68)
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "SFML Lernfortschritt"
   show: true
@@ -18,7 +23,7 @@ apex_config:
     position: bottom
     fontSize: "11px"
   yaxis:
-    - seriesName: "7-Tage Ø Genauigkeit"
+    - seriesName: "Genauigkeit 7d-Ø"
       min: 0
       max: 100
       tickAmount: 5
@@ -30,9 +35,11 @@ apex_config:
         style:
           color: "#4CAF50"
           fontSize: "12px"
-    - seriesName: "Genauigkeit (tgl.)"
+    - seriesName: "Genauigkeit täglich"
       show: false
-    - seriesName: "7-Tage Ø Fehler"
+    - seriesName: "Fehler 7d-Ø"
+      show: false
+    - seriesName: "Fehler 7d-Ø Trend"
       opposite: true
       min: 0
       max: 12
@@ -45,21 +52,8 @@ apex_config:
         style:
           color: "#F44336"
           fontSize: "12px"
-    - seriesName: "Fehler (tgl.)"
+    - seriesName: "Fehler täglich"
       show: false
-  annotations:
-    yaxis:
-      - y: 80
-        yAxisIndex: 0
-        borderColor: "#4CAF5050"
-        strokeDashArray: 6
-        label:
-          text: "Ziel 80%"
-          position: "front"
-          style:
-            color: "#4CAF50"
-            background: "transparent"
-            fontSize: "10px"
   tooltip:
     shared: true
     y:
@@ -70,8 +64,9 @@ apex_config:
           return val.toFixed(2) + ' kWh';
         }
 series:
+  # --- Header links: Genauigkeit (state = 67.5) ---
   - entity: sensor.sfml_lernfortschritt
-    name: "7-Tage Ø Genauigkeit"
+    name: "Genauigkeit 7d-Ø"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d, i) {
@@ -79,37 +74,41 @@ series:
         var avg = win.reduce(function(s, x) { return s + x.accuracy; }, 0) / win.length;
         return [new Date(d.date).getTime(), Math.round(avg * 10) / 10];
       });
-    color_threshold:
-      - value: 0
-        color: "#F44336"
-      - value: 50
-        color: "#FF9800"
-      - value: 70
-        color: "#4CAF50"
+    color: "#4CAF50"
     stroke_width: 3
     type: line
     curve: smooth
+    unit: " %"
     show:
       in_header: raw
-      header_color_threshold: true
 
   - entity: sensor.sfml_lernfortschritt
-    name: "Genauigkeit (tgl.)"
+    name: "Genauigkeit täglich"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d) {
         return [new Date(d.date).getTime(), d.accuracy];
       });
-    color: "#81C784"
+    color: "#4CAF50"
     stroke_width: 1
-    type: line
+    type: area
     curve: stepline
-    opacity: 0.5
+    opacity: 0.15
     show:
       in_header: false
 
+  # --- Header rechts: Fehler (attribute error_7d = 2.68) ---
   - entity: sensor.sfml_lernfortschritt
-    name: "7-Tage Ø Fehler"
+    name: "Fehler 7d-Ø"
+    attribute: error_7d
+    color: "#F44336"
+    unit: " kWh"
+    show:
+      in_header: raw
+      in_chart: false
+
+  - entity: sensor.sfml_lernfortschritt
+    name: "Fehler 7d-Ø Trend"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d, i) {
@@ -119,22 +118,15 @@ series:
         var avg = vals.reduce(function(s, x) { return s + x.error; }, 0) / vals.length;
         return [new Date(d.date).getTime(), Math.round(avg * 100) / 100];
       });
-    color_threshold:
-      - value: 0
-        color: "#4CAF50"
-      - value: 2
-        color: "#FF9800"
-      - value: 5
-        color: "#F44336"
+    color: "#F44336"
     stroke_width: 3
     type: line
     curve: smooth
     show:
-      in_header: raw
-      header_color_threshold: true
+      in_header: false
 
   - entity: sensor.sfml_lernfortschritt
-    name: "Fehler (tgl.)"
+    name: "Fehler täglich"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.filter(function(d) { return d.error !== null; }).map(function(d) {
@@ -144,6 +136,6 @@ series:
     stroke_width: 1
     type: area
     curve: stepline
-    opacity: 0.15
+    opacity: 0.10
     show:
       in_header: false

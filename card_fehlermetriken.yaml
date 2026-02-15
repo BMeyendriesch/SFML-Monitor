@@ -1,0 +1,93 @@
+# =============================================================================
+# SFML Monitor — Fehlermetriken Trend (MAE, RMSE)
+# =============================================================================
+# MAE und RMSE werden als 7-Tage-Rolling-Werte aus den täglichen
+# Prognosefehlern (error_kwh) berechnet. Sinkende Werte = bessere Prognosen.
+#
+# Benötigte Sensoren: sensor.sfml_fehlermetriken_2
+#   → attribute chart_data = JSON mit date/error_kwh
+# =============================================================================
+type: custom:apexcharts-card
+grid_options:
+  columns: full
+header:
+  title: "Prognosefehler Trend"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 10d
+apex_config:
+  chart:
+    height: 320px
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - min: 0
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(1) + ' kWh'; }
+      title:
+        text: "Fehler (kWh)"
+        style:
+          fontSize: "12px"
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(2) + ' kWh';
+        }
+series:
+  # --- Täglicher Fehler (grau, dezente Fläche) ---
+  - entity: sensor.sfml_fehlermetriken_2
+    name: "Fehler täglich"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), d.error_kwh];
+      });
+    color: "#9E9E9E"
+    stroke_width: 1
+    type: area
+    curve: stepline
+    opacity: 0.2
+    show:
+      in_header: false
+
+  # --- MAE 7-Tage-Mittel (blau) ---
+  - entity: sensor.sfml_fehlermetriken_2
+    name: "MAE 7-Tage-Mittel"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        var win = data.slice(Math.max(0, i - 6), i + 1);
+        var avg = win.reduce(function(s, x) { return s + x.error_kwh; }, 0) / win.length;
+        return [new Date(d.date).getTime(), Math.round(avg * 100) / 100];
+      });
+    color: "#1E88E5"
+    stroke_width: 3
+    type: line
+    curve: smooth
+    unit: " kWh"
+    show:
+      in_header: raw
+
+  # --- RMSE 7-Tage-Mittel (rot) ---
+  - entity: sensor.sfml_fehlermetriken_2
+    name: "RMSE 7-Tage-Mittel"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        var win = data.slice(Math.max(0, i - 6), i + 1);
+        var mse = win.reduce(function(s, x) { return s + x.error_kwh * x.error_kwh; }, 0) / win.length;
+        return [new Date(d.date).getTime(), Math.round(Math.sqrt(mse) * 100) / 100];
+      });
+    color: "#E53935"
+    stroke_width: 3
+    type: line
+    curve: smooth
+    show:
+      in_header: false
