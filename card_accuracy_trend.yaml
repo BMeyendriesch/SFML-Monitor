@@ -13,21 +13,9 @@ apex_config:
     height: 280px
   yaxis:
     - min: 0
-      max: 100
-      tickAmount: 5
       labels:
         formatter: |
           EVAL:function(val) { return val + '%'; }
-  annotations:
-    yaxis:
-      - y: 100
-        borderColor: "#4CAF50"
-        strokeDashArray: 4
-        label:
-          text: "100%"
-          style:
-            color: "#4CAF50"
-            background: "transparent"
   tooltip:
     y:
       formatter: |

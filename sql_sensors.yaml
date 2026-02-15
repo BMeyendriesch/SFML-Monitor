@@ -21,7 +21,7 @@
     FROM (
       SELECT
         date,
-        ROUND(MIN(accuracy_percent, 100), 1) as acc,
+        ROUND(accuracy_percent, 1) as acc,
         ROUND(predicted_total_kwh, 2) as predicted,
         ROUND(actual_total_kwh, 2) as actual
       FROM daily_summaries
@@ -140,7 +140,7 @@
     FROM (
       SELECT
         date,
-        ROUND(MIN(accuracy_percent, 100), 1) as acc,
+        ROUND(accuracy_percent, 1) as acc,
         ROUND(ABS(error_kwh), 2) as err
       FROM daily_summaries
       WHERE actual_total_kwh > 0.5
