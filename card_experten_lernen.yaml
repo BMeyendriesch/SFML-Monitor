@@ -5,7 +5,7 @@
 # verändert. Höheres Gewicht = höheres Vertrauen des Systems.
 # Gewichte gemittelt über alle Wolkentypen.
 #
-# Benötigte Sensoren: sensor.sfml_experten_lernen
+# Benötigte Sensoren: sensor.sfml_experten_lernen_2
 # =============================================================================
 type: custom:apexcharts-card
 header:
@@ -52,7 +52,7 @@ apex_config:
           return val.toFixed(1) + '%';
         }
 series:
-  - entity: sensor.sfml_experten_lernen
+  - entity: sensor.sfml_experten_lernen_2
     name: "ECMWF Layers"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -65,7 +65,7 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_experten_lernen
+  - entity: sensor.sfml_experten_lernen_2
     name: "Bright Sky"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -78,7 +78,7 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_experten_lernen
+  - entity: sensor.sfml_experten_lernen_2
     name: "Open Meteo"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -91,7 +91,7 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_experten_lernen
+  - entity: sensor.sfml_experten_lernen_2
     name: "wttr.in"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);

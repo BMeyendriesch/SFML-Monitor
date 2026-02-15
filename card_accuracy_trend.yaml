@@ -21,7 +21,7 @@ apex_config:
       formatter: |
         EVAL:function(val) { return val.toFixed(1) + '%'; }
 series:
-  - entity: sensor.sfml_tagliche_genauigkeit
+  - entity: sensor.sfml_tagliche_genauigkeit_2
     name: "Ø Genauigkeit"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);

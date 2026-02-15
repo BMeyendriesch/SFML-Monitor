@@ -5,7 +5,7 @@
 # Zeigt, für welche Gruppen das System die besten Vorhersagen liefert
 # und wo noch Lernbedarf besteht.
 #
-# Benötigte Sensoren: sensor.sfml_gruppen_genauigkeit
+# Benötigte Sensoren: sensor.sfml_gruppen_genauigkeit_2
 #   → state = Ø Genauigkeit aller Gruppen (%)
 #   → attribute chart_data = JSON mit date/group/accuracy/hours
 # =============================================================================
@@ -45,7 +45,7 @@ apex_config:
           return val.toFixed(1) + '%';
         }
 series:
-  - entity: sensor.sfml_gruppen_genauigkeit
+  - entity: sensor.sfml_gruppen_genauigkeit_2
     name: "Gruppe 1"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -58,7 +58,7 @@ series:
     show:
       in_header: raw
 
-  - entity: sensor.sfml_gruppen_genauigkeit
+  - entity: sensor.sfml_gruppen_genauigkeit_2
     name: "Gruppe 2"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -71,7 +71,7 @@ series:
     show:
       in_header: raw
 
-  - entity: sensor.sfml_gruppen_genauigkeit
+  - entity: sensor.sfml_gruppen_genauigkeit_2
     name: "Gruppe 3"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);

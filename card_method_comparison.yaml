@@ -34,7 +34,7 @@ apex_config:
       formatter: |
         EVAL:function(val) { return val.toFixed(3); }
 series:
-  - entity: sensor.sfml_methoden_performance
+  - entity: sensor.sfml_methoden_performance_2
     name: "Physics MAE"
     type: column
     color: "#9E9E9E"
@@ -43,14 +43,14 @@ series:
     data_generator: |
       var data = JSON.parse(entity.attributes.method_data);
       return data.map(d => [d.bucket, d.physics_mae]);
-  - entity: sensor.sfml_methoden_performance
+  - entity: sensor.sfml_methoden_performance_2
     name: "AI MAE"
     type: column
     color: "#2196F3"
     data_generator: |
       var data = JSON.parse(entity.attributes.method_data);
       return data.map(d => [d.bucket, d.ai_mae]);
-  - entity: sensor.sfml_methoden_performance
+  - entity: sensor.sfml_methoden_performance_2
     name: "Kalibrierung"
     type: column
     color: "#FF9800"

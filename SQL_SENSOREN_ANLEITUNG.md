@@ -6,14 +6,14 @@
 - Alle Sensoren müssen manuell über die Home Assistant UI angelegt werden: **Einstellungen → Geräte & Dienste → Integration hinzufügen → SQL**
 - Die Datenbankverbindung ist immer gleich: `sqlite:////config/solar_forecast_ml/solar_forecast.db`
 - Die Spalte ist immer: `state`
-- Nach dem Erstellen eines Sensors kann HA ein Suffix wie `_2` anhängen, falls es zu Namenskonflikten kommt. In diesem Fall muss die entsprechende Card-YAML angepasst werden.
+- Alle Sensoren haben aktuell das Suffix `_2` (z.B. `sensor.sfml_daily_accuracy_2`). Die Card-YAML-Dateien sind bereits entsprechend angepasst.
 - Der Sensor **„SFML Ensemble Gewichte"** (sfml_ensemble_gewichte) wird **NICHT benötigt** — es gibt keine Card, die ihn nutzt. Diese Card wurde entfernt, da die Daten keine Zeitreihe darstellen.
 
 ---
 
 ## 1. SFML Tägliche Genauigkeit
 
-**Entity-ID:** `sensor.sfml_daily_accuracy`
+**Entity-ID:** `sensor.sfml_daily_accuracy_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -22,7 +22,7 @@
 
 **SQL-Query (eine Zeile - zum Kopieren):**
 ```sql
-SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, 'accuracy', acc, 'predicted', predicted, 'actual', actual)) as chart_data FROM (SELECT date, ROUND(MIN(accuracy_percent, 100), 1) as acc, ROUND(predicted_total_kwh, 2) as predicted, ROUND(actual_total_kwh, 2) as actual FROM daily_summaries WHERE actual_total_kwh > 0.5 ORDER BY date DESC LIMIT 30)
+SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, 'accuracy', acc, 'predicted', predicted, 'actual', actual)) as chart_data FROM (SELECT date, ROUND(accuracy_percent, 1) as acc, ROUND(predicted_total_kwh, 2) as predicted, ROUND(actual_total_kwh, 2) as actual FROM daily_summaries WHERE actual_total_kwh > 0.5 ORDER BY date DESC LIMIT 30)
 ```
 
 **Verwendung:** Cards `card_accuracy_trend.yaml` und `card_forecast_vs_actual.yaml`
@@ -31,7 +31,7 @@ SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, '
 
 ## 2. SFML Modell Status
 
-**Entity-ID:** `sensor.sfml_model_status`
+**Entity-ID:** `sensor.sfml_model_status_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -49,7 +49,7 @@ SELECT m.active_model as state, m.training_samples as samples, ROUND(m.accuracy 
 
 ## 3. SFML Drift Events
 
-**Entity-ID:** `sensor.sfml_drift_events`
+**Entity-ID:** `sensor.sfml_drift_events_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -67,7 +67,7 @@ SELECT (SELECT COUNT(*) FROM drift_events) as state, json_group_array(json_objec
 
 ## 4. SFML Wetter Experten
 
-**Entity-ID:** `sensor.sfml_weather_experts`
+**Entity-ID:** `sensor.sfml_weather_experts_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -85,7 +85,7 @@ SELECT (SELECT expert_name FROM (SELECT expert_name, AVG(weight) as avg_w FROM w
 
 ## 5. SFML Methoden Performance
 
-**Entity-ID:** `sensor.sfml_method_performance`
+**Entity-ID:** `sensor.sfml_method_performance_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -103,25 +103,27 @@ SELECT CASE WHEN AVG(ai_mae) < AVG(physics_mae) THEN 'AI+Physics' ELSE 'Physics'
 
 ## 6. SFML Lernfortschritt
 
-**Entity-ID:** `sensor.sfml_lernfortschritt`
+**Entity-ID:** `sensor.sfml_lernfortschritt_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
 - **Spalte:** `state`
 - **Einheit:** `%`
 
-**SQL-Query (eine Zeile - zum Kopieren):**
+**SQL-Query (eine Zeile - zum Kopieren - AKTUALISIERT):**
 ```sql
-SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, 'accuracy', acc, 'error', err)) as chart_data, (SELECT ROUND(AVG(e), 2) FROM (SELECT ABS(error_kwh) as e FROM daily_summaries WHERE actual_total_kwh > 0.5 AND error_kwh IS NOT NULL ORDER BY date DESC LIMIT 7)) as error_7d FROM (SELECT date, ROUND(MIN(accuracy_percent, 100), 1) as acc, ROUND(ABS(error_kwh), 2) as err FROM daily_summaries WHERE actual_total_kwh > 0.5 ORDER BY date)
+SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, 'accuracy', acc, 'error', err, 'predicted', predicted, 'actual', actual)) as chart_data, (SELECT ROUND(AVG(e), 2) FROM (SELECT ABS(error_kwh) as e FROM daily_summaries WHERE actual_total_kwh > 0.5 AND error_kwh IS NOT NULL ORDER BY date DESC LIMIT 7)) as error_7d FROM (SELECT date, ROUND(accuracy_percent, 1) as acc, ROUND(ABS(error_kwh), 2) as err, ROUND(predicted_total_kwh, 2) as predicted, ROUND(actual_total_kwh, 2) as actual FROM daily_summaries WHERE actual_total_kwh > 0.5 ORDER BY date)
 ```
 
-**Verwendung:** Card `card_lernfortschritt.yaml` — Genauigkeit + Fehler als 7-Tage-Rolling-Average
+**Wichtiger Hinweis:** Die Query enthält jetzt zusätzlich `predicted` und `actual` im chart_data-JSON. Diese Felder werden für die R²-Berechnung in der Card benötigt.
+
+**Verwendung:** Card `card_lernfortschritt.yaml` — Genauigkeit 7d-Ø, R² Live 7d-Ø, MAE 7d-Ø + R² Training aus Modell-Meta
 
 ---
 
 ## 7. SFML Kalibrierung Verlauf
 
-**Entity-ID:** `sensor.sfml_kalibrierung_verlauf`
+**Entity-ID:** `sensor.sfml_kalibrierung_verlauf_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -139,7 +141,7 @@ SELECT ROUND((SELECT AVG(global_factor) FROM physics_calibration_groups), 3) as 
 
 ## 8. SFML Fehlermetriken
 
-**Entity-ID:** `sensor.sfml_fehlermetriken`
+**Entity-ID:** `sensor.sfml_fehlermetriken_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -161,7 +163,7 @@ SELECT ROUND(AVG(abs_err), 2) as state, json_group_array(json_object('date', dat
 
 ## 9. SFML Drift Timeline
 
-**Entity-ID:** `sensor.sfml_drift_timeline`
+**Entity-ID:** `sensor.sfml_drift_timeline_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -180,7 +182,7 @@ SELECT COUNT(*) as state, json_group_array(json_object('date', event_date, 'scop
 ## 10. SFML Ensemble Gewichte
 **⚠️ WIRD NICHT BENÖTIGT — überspringen**
 
-**Entity-ID:** `sensor.sfml_ensemble_gewichte` _(nicht anlegen)_
+**Entity-ID:** `sensor.sfml_ensemble_gewichte_2` _(nicht anlegen)_
 
 Grund: Diese Query wurde aus den Dashboard-Cards entfernt. Es gibt keine Card, die diesen Sensor nutzt. Die Ensemble-Gewichte haben keine aussagekräftige Zeitreihe und sind daher für die Monitoring-Ansicht nicht relevant.
 
@@ -188,7 +190,7 @@ Grund: Diese Query wurde aus den Dashboard-Cards entfernt. Es gibt keine Card, d
 
 ## 11. SFML Gruppen Genauigkeit
 
-**Entity-ID:** `sensor.sfml_gruppen_genauigkeit`
+**Entity-ID:** `sensor.sfml_gruppen_genauigkeit_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
@@ -206,7 +208,7 @@ SELECT ROUND(AVG(avg_acc), 1) as state, json_group_array(json_object('date', tar
 
 ## 12. SFML Experten Lernen
 
-**Entity-ID:** `sensor.sfml_experten_lernen`
+**Entity-ID:** `sensor.sfml_experten_lernen_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`

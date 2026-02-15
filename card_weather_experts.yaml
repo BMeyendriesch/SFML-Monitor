@@ -25,7 +25,7 @@ apex_config:
       formatter: |
         EVAL:function(val) { return val.toFixed(1) + '%'; }
 series:
-  - entity: sensor.sfml_wetter_experten
+  - entity: sensor.sfml_wetter_experten_2
     name: "Gewichtung"
     type: column
     color: "#2196F3"

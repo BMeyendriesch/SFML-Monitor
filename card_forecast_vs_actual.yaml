@@ -22,14 +22,14 @@ apex_config:
       formatter: |
         EVAL:function(val) { return val.toFixed(2) + ' kWh'; }
 series:
-  - entity: sensor.sfml_tagliche_genauigkeit
+  - entity: sensor.sfml_tagliche_genauigkeit_2
     name: "Vorhersage"
     type: column
     color: "#9E9E9E"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(d => [new Date(d.date).getTime(), d.predicted]);
-  - entity: sensor.sfml_tagliche_genauigkeit
+  - entity: sensor.sfml_tagliche_genauigkeit_2
     name: "Realität"
     type: column
     color: "#FF9800"

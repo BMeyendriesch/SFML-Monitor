@@ -1,10 +1,13 @@
 # =============================================================================
 # SFML Monitor — Lernfortschritt (Multi-KPI Übersicht)
 # =============================================================================
-# Benötigte Sensoren: sensor.sfml_lernfortschritt
-#   → state = Ø Genauigkeit (67.5)
-#   → attribute chart_data = JSON mit date/accuracy/error
-#   → attribute error_7d = 7-Tage Ø Fehler (2.68)
+# Benötigte Sensoren:
+#   sensor.sfml_lernfortschritt_2
+#     → state = Ø Genauigkeit, attribute chart_data, attribute error_7d
+#   sensor.sfml_tagliche_genauigkeit_2
+#     → attribute chart_data mit predicted/actual für R²-Berechnung
+#   sensor.sfml_modell_status_2
+#     → attribute training_r2 (oder r2) = R² des Trainings
 # =============================================================================
 type: custom:apexcharts-card
 grid_options:
@@ -23,23 +26,27 @@ apex_config:
     position: bottom
     fontSize: "11px"
   yaxis:
+    # 0: Genauigkeit 7d-Ø (chart)
     - seriesName: "Genauigkeit 7d-Ø"
       min: 0
-      max: 100
-      tickAmount: 5
+      max: 140
+      tickAmount: 7
       labels:
         formatter: |
           EVAL:function(val) { return val + '%'; }
       title:
-        text: "Genauigkeit %"
+        text: "Genauigkeit / R² (%)"
         style:
           color: "#4CAF50"
           fontSize: "12px"
-    - seriesName: "Genauigkeit täglich"
+    # 1: R² 7d-Ø (chart) — gleiche Skala wie Genauigkeit
+    - seriesName: "R² 7d-Ø"
+      min: 0
+      max: 140
+      tickAmount: 7
       show: false
-    - seriesName: "Fehler 7d-Ø"
-      show: false
-    - seriesName: "Fehler 7d-Ø Trend"
+    # 2: MAE 7d-Ø (chart) — rechte Achse
+    - seriesName: "MAE 7d-Ø"
       opposite: true
       min: 0
       max: 12
@@ -48,12 +55,10 @@ apex_config:
         formatter: |
           EVAL:function(val) { return val.toFixed(1) + ' kWh'; }
       title:
-        text: "Fehler kWh"
+        text: "MAE (kWh)"
         style:
           color: "#F44336"
           fontSize: "12px"
-    - seriesName: "Fehler täglich"
-      show: false
   tooltip:
     shared: true
     y:
@@ -61,11 +66,14 @@ apex_config:
         EVAL:function(val, { seriesIndex }) {
           if (val === null || val === undefined) return '';
           if (seriesIndex <= 1) return val.toFixed(1) + '%';
-          return val.toFixed(2) + ' kWh';
+          if (seriesIndex === 2) return val.toFixed(2) + ' kWh';
+          return val.toFixed(1);
         }
 series:
-  # --- Header links: Genauigkeit (state = 67.5) ---
-  - entity: sensor.sfml_lernfortschritt
+  # === Chart-Serien (bestimmen die yaxis-Zuordnung) ===
+
+  # 0: Genauigkeit 7d-Ø (grün)
+  - entity: sensor.sfml_lernfortschritt_2
     name: "Genauigkeit 7d-Ø"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -78,37 +86,40 @@ series:
     stroke_width: 3
     type: line
     curve: smooth
-    unit: " %"
-    show:
-      in_header: raw
-
-  - entity: sensor.sfml_lernfortschritt
-    name: "Genauigkeit täglich"
-    data_generator: |
-      var data = JSON.parse(entity.attributes.chart_data);
-      return data.map(function(d) {
-        return [new Date(d.date).getTime(), d.accuracy];
-      });
-    color: "#4CAF50"
-    stroke_width: 1
-    type: area
-    curve: stepline
-    opacity: 0.15
     show:
       in_header: false
 
-  # --- Header rechts: Fehler (attribute error_7d = 2.68) ---
-  - entity: sensor.sfml_lernfortschritt
-    name: "Fehler 7d-Ø"
-    attribute: error_7d
-    color: "#F44336"
-    unit: " kWh"
+  # 1: R² Live 7d-Ø (blau)
+  - entity: sensor.sfml_tagliche_genauigkeit_2
+    name: "R² 7d-Ø"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      data.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
+      return data.map(function(d, i) {
+        var win = data.slice(Math.max(0, i - 6), i + 1);
+        if (win.length < 4) return [new Date(d.date).getTime(), null];
+        var n = win.length;
+        var sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0;
+        for (var j = 0; j < n; j++) {
+          var x = win[j].predicted, y = win[j].actual;
+          sx += x; sy += y; sxx += x*x; syy += y*y; sxy += x*y;
+        }
+        var num = n * sxy - sx * sy;
+        var den = Math.sqrt((n*sxx - sx*sx) * (n*syy - sy*sy));
+        if (den === 0) return [new Date(d.date).getTime(), null];
+        var r2 = Math.pow(num / den, 2) * 100;
+        return [new Date(d.date).getTime(), Math.round(r2 * 10) / 10];
+      });
+    color: "#1E88E5"
+    stroke_width: 3
+    type: line
+    curve: smooth
     show:
-      in_header: raw
-      in_chart: false
+      in_header: false
 
-  - entity: sensor.sfml_lernfortschritt
-    name: "Fehler 7d-Ø Trend"
+  # 2: MAE 7d-Ø (rot)
+  - entity: sensor.sfml_lernfortschritt_2
+    name: "MAE 7d-Ø"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d, i) {
@@ -125,17 +136,33 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_lernfortschritt
-    name: "Fehler täglich"
-    data_generator: |
-      var data = JSON.parse(entity.attributes.chart_data);
-      return data.filter(function(d) { return d.error !== null; }).map(function(d) {
-        return [new Date(d.date).getTime(), d.error];
-      });
-    color: "#EF9A9A"
-    stroke_width: 1
-    type: area
-    curve: stepline
-    opacity: 0.10
+  # === Header-only Serien ===
+
+  # 3: Genauigkeit Header (state = Ø Genauigkeit)
+  - entity: sensor.sfml_lernfortschritt_2
+    name: "Genauigkeit"
+    color: "#4CAF50"
+    unit: " %"
     show:
-      in_header: false
+      in_header: raw
+      in_chart: false
+
+  # 4: R² Training Header
+  - entity: sensor.sfml_modell_status_2
+    name: "R² Training"
+    attribute: r2
+    color: "#FF9800"
+    unit: " %"
+    show:
+      in_header: raw
+      in_chart: false
+
+  # 5: MAE Header (aus Attribut error_7d)
+  - entity: sensor.sfml_lernfortschritt_2
+    name: "MAE"
+    attribute: error_7d
+    color: "#F44336"
+    unit: " kWh"
+    show:
+      in_header: raw
+      in_chart: false

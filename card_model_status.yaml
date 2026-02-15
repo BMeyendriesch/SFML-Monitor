@@ -4,38 +4,38 @@
 type: entities
 title: "AI-Modell & Drift Status"
 entities:
-  - entity: sensor.sfml_modell_status
+  - entity: sensor.sfml_modell_status_2
     name: "Modell-Typ"
     icon: mdi:brain
   - type: attribute
-    entity: sensor.sfml_modell_status
+    entity: sensor.sfml_modell_status_2
     attribute: samples
     name: "Trainings-Samples"
     icon: mdi:database
     suffix: " Samples"
   - type: attribute
-    entity: sensor.sfml_modell_status
+    entity: sensor.sfml_modell_status_2
     attribute: r2
     name: "R² Score"
     icon: mdi:chart-bell-curve
     suffix: "%"
   - type: attribute
-    entity: sensor.sfml_modell_status
+    entity: sensor.sfml_modell_status_2
     attribute: rmse
     name: "RMSE"
     icon: mdi:sigma
   - type: attribute
-    entity: sensor.sfml_modell_status
+    entity: sensor.sfml_modell_status_2
     attribute: mae_30d
     name: "MAE (30 Tage)"
     icon: mdi:chart-line-variant
     suffix: " kWh"
   - type: attribute
-    entity: sensor.sfml_modell_status
+    entity: sensor.sfml_modell_status_2
     attribute: bias_30d
     name: "Bias (30 Tage)"
     icon: mdi:swap-vertical
     suffix: " kWh"
-  - entity: sensor.sfml_drift_events
+  - entity: sensor.sfml_drift_events_2
     name: "Drift Events"
     icon: mdi:alert-circle-outline

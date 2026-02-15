@@ -130,7 +130,9 @@
       json_group_array(json_object(
         'date', date,
         'accuracy', acc,
-        'error', err
+        'error', err,
+        'predicted', predicted,
+        'actual', actual
       )) as chart_data,
       (SELECT ROUND(AVG(e), 2) FROM (
         SELECT ABS(error_kwh) as e FROM daily_summaries
@@ -141,7 +143,9 @@
       SELECT
         date,
         ROUND(accuracy_percent, 1) as acc,
-        ROUND(ABS(error_kwh), 2) as err
+        ROUND(ABS(error_kwh), 2) as err,
+        ROUND(predicted_total_kwh, 2) as predicted,
+        ROUND(actual_total_kwh, 2) as actual
       FROM daily_summaries
       WHERE actual_total_kwh > 0.5
       ORDER BY date

@@ -6,7 +6,7 @@
 # Scope (global vs. Gruppe) wird farblich unterschieden.
 # Scatter wird simuliert via line + stroke_width 0 + markers.
 #
-# Benötigte Sensoren: sensor.sfml_drift_timeline
+# Benötigte Sensoren: sensor.sfml_drift_timeline_2
 #   → state = Anzahl Events
 #   → attribute chart_data = JSON mit date/scope/type/severity/value/desc
 # =============================================================================
@@ -51,7 +51,7 @@ apex_config:
           return labels[val] || '';
         }
 series:
-  - entity: sensor.sfml_drift_timeline
+  - entity: sensor.sfml_drift_timeline_2
     name: "Global"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -66,7 +66,7 @@ series:
     show:
       in_header: raw
 
-  - entity: sensor.sfml_drift_timeline
+  - entity: sensor.sfml_drift_timeline_2
     name: "Gruppe 1"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -81,7 +81,7 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_drift_timeline
+  - entity: sensor.sfml_drift_timeline_2
     name: "Gruppe 2"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -96,7 +96,7 @@ series:
     show:
       in_header: false
 
-  - entity: sensor.sfml_drift_timeline
+  - entity: sensor.sfml_drift_timeline_2
     name: "Gruppe 3"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);

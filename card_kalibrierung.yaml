@@ -4,7 +4,7 @@
 # Zeigt, wie die Physics-Kalibrierungsfaktoren über die Zeit gegen 1.0
 # konvergieren. Faktor = Actual/Predicted — 1.0 = perfekte Kalibrierung.
 #
-# Benötigte Sensoren: sensor.sfml_kalibrierung_verlauf
+# Benötigte Sensoren: sensor.sfml_kalibrierung_verlauf_2
 # =============================================================================
 type: custom:apexcharts-card
 header:
@@ -53,7 +53,7 @@ apex_config:
           return val.toFixed(3);
         }
 series:
-  - entity: sensor.sfml_kalibrierung_verlauf
+  - entity: sensor.sfml_kalibrierung_verlauf_2
     name: "Gruppe 1"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -66,7 +66,7 @@ series:
     show:
       in_header: raw
 
-  - entity: sensor.sfml_kalibrierung_verlauf
+  - entity: sensor.sfml_kalibrierung_verlauf_2
     name: "Gruppe 2"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
@@ -79,7 +79,7 @@ series:
     show:
       in_header: raw
 
-  - entity: sensor.sfml_kalibrierung_verlauf
+  - entity: sensor.sfml_kalibrierung_verlauf_2
     name: "Gruppe 3"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
