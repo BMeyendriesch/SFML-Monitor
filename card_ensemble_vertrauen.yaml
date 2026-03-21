@@ -1,0 +1,98 @@
+# =============================================================================
+# SFML Monitor — LSTM vs. Ridge: Systemvertrauen pro Gruppe
+# =============================================================================
+# Gestapelter 100%-Balken: Wie viel Gewicht legt das System auf das LSTM-Modell
+# vs. das Ridge-Referenzmodell — getrennt nach Panelgruppe und Tageszeit.
+#
+# Interpretation:
+#   Hoher LSTM-Anteil (blau) → System vertraut dem neuronalen Netz
+#   Hoher Ridge-Anteil (grau) → System vertraut der linearen Regression
+#   Das Gewicht wird täglich aus dem Prognosefehler (MAE) gelernt:
+#   Wer weniger Fehler macht, bekommt mehr Gewicht.
+#
+# Nur "bedeckt"-Bedingungen (meiste Trainingsdaten, 2–15 Samples pro Bucket).
+# X-Achse: kategorisch (Gruppe × Tageszeit), enkodiert als Unix-ms-Indizes
+#   0 = G1 · Mo.  1 = G1 · Mi.  2 = G1 · Na.
+#   3 = G2 · Mo.  4 = G2 · Mi.  5 = G2 · Na.
+#   6 = G3 · Mo.  7 = G3 · Mi.  8 = G3 · Na.
+#
+# Benötigte Sensoren: sensor.sfml_ensemble_vertrauen_2
+#   → state      = Ø LSTM-Gewicht in % (Wintersaison, bedeckt)
+#   → chart_data = JSON mit group/bucket/lstm_w/ridge_w/lstm_mae/ridge_mae/samples
+# =============================================================================
+type: custom:apexcharts-card
+grid_options:
+  columns: full
+header:
+  title: "LSTM vs. Ridge — Systemvertrauen (bedeckt)"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 1d
+apex_config:
+  chart:
+    height: 320
+    type: bar
+    stacked: true
+    stackType: "100%"
+  plotOptions:
+    bar:
+      columnWidth: "60%"
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  xaxis:
+    type: datetime
+    min: -30000
+    max: 510000
+    tickAmount: 9
+    labels:
+      formatter: |
+        EVAL:function(val) {
+          var labels = ['G1 · Mo.', 'G1 · Mi.', 'G1 · Na.', 'G2 · Mo.', 'G2 · Mi.', 'G2 · Na.', 'G3 · Mo.', 'G3 · Mi.', 'G3 · Na.'];
+          var idx = Math.round(val / 60000);
+          return (idx >= 0 && idx < labels.length) ? labels[idx] : '';
+        }
+  yaxis:
+    - min: 0
+      max: 100
+      labels:
+        formatter: |
+          EVAL:function(val) { return Math.round(val) + ' %'; }
+  tooltip:
+    shared: true
+    y:
+      formatter: |
+        EVAL:function(val, opts) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(1) + ' %';
+        }
+series:
+  # --- LSTM-Anteil (blau) ---
+  - entity: sensor.sfml_ensemble_vertrauen_2
+    name: "LSTM"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        return [i * 60000, d.lstm_w];
+      });
+    type: column
+    color: "#1E88E5"
+    unit: " %"
+    show:
+      in_header: raw
+
+  # --- Ridge-Anteil (grau) ---
+  - entity: sensor.sfml_ensemble_vertrauen_2
+    name: "Ridge"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d, i) {
+        return [i * 60000, d.ridge_w];
+      });
+    type: column
+    color: "#78909C"
+    unit: " %"
+    show:
+      in_header: false

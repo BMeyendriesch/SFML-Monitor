@@ -13,17 +13,19 @@
 
 ## 1. SFML Tägliche Genauigkeit
 
-**Entity-ID:** `sensor.sfml_daily_accuracy_2`
+**Entity-ID:** `sensor.sfml_tagliche_genauigkeit_2`
 
 **Zu füllende Felder:**
 - **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
 - **Spalte:** `state`
 - **Einheit:** `%`
 
-**SQL-Query (eine Zeile - zum Kopieren):**
+**SQL-Query (eine Zeile - zum Kopieren — AKTUALISIERT):**
 ```sql
 SELECT ROUND(AVG(acc), 1) as state, json_group_array(json_object('date', date, 'accuracy', acc, 'predicted', predicted, 'actual', actual)) as chart_data FROM (SELECT date, ROUND(accuracy_percent, 1) as acc, ROUND(predicted_total_kwh, 2) as predicted, ROUND(actual_total_kwh, 2) as actual FROM daily_summaries WHERE actual_total_kwh > 0.5 ORDER BY date DESC LIMIT 30)
 ```
+
+**Wichtiger Hinweis:** Falls der Sensor in HA einen falschen State-Wert liefert (z.B. 15,8 % statt ~61 %): Der Sensor wurde mit einer veralteten Query angelegt. Die obige Query ergibt laut lokaler DB einen korrekten Durchschnitt von 61,6 %. Sensor in HA neu konfigurieren: Einstellungen → Geräte & Dienste → SQL → Sensor bearbeiten → Query ersetzen.
 
 **Verwendung:** Cards `card_accuracy_trend.yaml` und `card_forecast_vs_actual.yaml`
 
@@ -224,6 +226,62 @@ SELECT (SELECT expert_name FROM (SELECT expert_name, AVG(weight_after) as avg_w 
 
 ---
 
+## 13. SFML KI Vorteil
+
+**Entity-ID:** `sensor.sfml_ki_vorteil` _(kein `_2`-Suffix laut Benutzer)_
+
+**Zu füllende Felder:**
+- **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
+- **Spalte:** `state`
+- **Einheit:** `kWh`
+
+**SQL-Query (eine Zeile - zum Kopieren):**
+```sql
+SELECT ROUND(AVG(physics_mae - ai_mae), 3) as state, json_group_array(json_object('date', target_date, 'physics_mae', physics_mae, 'ai_mae', ai_mae, 'blend_mae', blend_mae, 'stunden', stunden)) as chart_data FROM (SELECT target_date, ROUND(AVG(ABS(actual_kwh - physics_kwh)), 3) as physics_mae, ROUND(AVG(ABS(actual_kwh - ai_kwh)), 3) as ai_mae, ROUND(AVG(ABS(actual_kwh - prediction_kwh)), 3) as blend_mae, COUNT(*) as stunden FROM hourly_predictions WHERE is_production_hour = 1 AND actual_kwh > 0.01 AND physics_kwh IS NOT NULL AND ai_kwh IS NOT NULL GROUP BY target_date ORDER BY target_date)
+```
+
+**State-Bedeutung:** Ø (Physik-MAE − KI-MAE) in kWh — positiv = KI im Schnitt genauer, negativ = Physik im Schnitt genauer
+
+**Verwendung:** Card `card_ki_vorteil.yaml` — Zeitlicher Verlauf des täglichen MAE (kWh) für Physik, KI (LSTM) und Blend aus `hourly_predictions`
+
+---
+
+## 14. SFML LSTM Tagesmetriken
+
+**Entity-ID:** `sensor.sfml_lstm_tagesmetriken_2`
+
+**Zu füllende Felder:**
+- **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
+- **Spalte:** `state`
+- **Einheit:** `kWh`
+
+**SQL-Query (eine Zeile - zum Kopieren):**
+```sql
+SELECT ROUND(AVG(ml_mae), 3) as state, json_group_array(json_object('date', date, 'mae', ROUND(ml_mae, 3), 'rmse', ROUND(ml_rmse, 3), 'r2', ROUND(ml_r2_score, 3))) as chart_data FROM (SELECT date, ml_mae, ml_rmse, ml_r2_score FROM daily_summaries WHERE ml_rmse IS NOT NULL AND actual_total_kwh > 0.5 ORDER BY date)
+```
+
+**Verwendung:** Card `card_lstm_lernmetriken.yaml` — R²-Score des LSTM-Modells im zeitlichen Verlauf (geclampt auf [-1, 1])
+
+---
+
+## 15. SFML Ensemble Vertrauen
+
+**Entity-ID:** `sensor.sfml_ensemble_vertrauen_2`
+
+**Zu füllende Felder:**
+- **Datenbankadresse:** `sqlite:////config/solar_forecast_ml/solar_forecast.db`
+- **Spalte:** `state`
+- **Einheit:** `%`
+
+**SQL-Query (eine Zeile - zum Kopieren):**
+```sql
+SELECT ROUND(AVG(lstm_weight * 100), 1) as state, json_group_array(json_object('group', group_name, 'bucket', cloud_bucket || '/' || hour_bucket, 'lstm_w', ROUND(lstm_weight * 100, 1), 'ridge_w', ROUND(ridge_weight * 100, 1), 'lstm_mae', ROUND(lstm_mae, 4), 'ridge_mae', ROUND(ridge_mae, 4), 'samples', sample_count)) as chart_data FROM (SELECT * FROM ensemble_group_weights WHERE season = 'winter' AND cloud_bucket = 'overcast' ORDER BY group_name, CASE hour_bucket WHEN 'morning' THEN 1 WHEN 'midday' THEN 2 WHEN 'afternoon' THEN 3 END)
+```
+
+**Verwendung:** Card `card_ensemble_vertrauen.yaml` — 100%-gestapelter Balken: LSTM- vs. Ridge-Gewicht pro Panelgruppe und Tageszeit (nur bedeckte Bedingungen)
+
+---
+
 ## Anleitung zum Anlegen eines Sensors in der Home Assistant UI
 
 1. **Home Assistant öffnen** und zum Bereich **Einstellungen** navigieren
@@ -255,16 +313,22 @@ SELECT (SELECT expert_name FROM (SELECT expert_name, AVG(weight_after) as avg_w 
 
 ## Zusammenfassung
 
-Es sind **11 Sensoren** zu erstellen (der 12. Sensor „SFML Ensemble Gewichte" wird nicht benötigt):
+Es sind **14 Sensoren** zu erstellen (Nr. 10 „SFML Ensemble Gewichte" wird nicht benötigt):
 
-1. ✅ SFML Tägliche Genauigkeit
-2. ✅ SFML Modell Status
-3. ✅ SFML Drift Events
-4. ✅ SFML Wetter Experten
-5. ✅ SFML Methoden Performance
-6. ✅ SFML Lernfortschritt
-7. ✅ SFML Kalibrierung Verlauf
-8. ✅ SFML Fehlermetriken (aktualisierte Query verwenden!)
-9. ✅ SFML Drift Timeline
-10. ✅ SFML Gruppen Genauigkeit
-11. ✅ SFML Experten Lernen
+| # | Sensor | Entity-ID | Einheit | Card |
+|---|--------|-----------|---------|------|
+| 1 | SFML Tägliche Genauigkeit | `sensor.sfml_tagliche_genauigkeit_2` | `%` | card_accuracy_trend, card_forecast_vs_actual |
+| 2 | SFML Modell Status | `sensor.sfml_model_status_2` | — | card_model_status |
+| 3 | SFML Drift Events | `sensor.sfml_drift_events_2` | — | card_model_status |
+| 4 | SFML Wetter Experten | `sensor.sfml_weather_experts_2` | — | card_weather_experts |
+| 5 | SFML Methoden Performance | `sensor.sfml_method_performance_2` | — | card_method_comparison |
+| 6 | SFML Lernfortschritt | `sensor.sfml_lernfortschritt_2` | `%` | card_lernfortschritt |
+| 7 | SFML Kalibrierung Verlauf | `sensor.sfml_kalibrierung_verlauf_2` | — | card_kalibrierung |
+| 8 | SFML Fehlermetriken | `sensor.sfml_fehlermetriken_2` | `kWh` | card_fehlermetriken |
+| 9 | SFML Drift Timeline | `sensor.sfml_drift_timeline_2` | — | card_drift_timeline |
+| 10 | ~~SFML Ensemble Gewichte~~ | ~~`sensor.sfml_ensemble_gewichte_2`~~ | — | **nicht anlegen** |
+| 11 | SFML Gruppen Genauigkeit | `sensor.sfml_gruppen_genauigkeit_2` | `%` | card_gruppen_genauigkeit |
+| 12 | SFML Experten Lernen | `sensor.sfml_experten_lernen_2` | — | card_experten_lernen |
+| 13 | SFML KI Vorteil | `sensor.sfml_ki_vorteil` | `kWh` | card_ki_vorteil |
+| 14 | SFML LSTM Tagesmetriken | `sensor.sfml_lstm_tagesmetriken` | `kWh` | card_lstm_lernmetriken |
+| 15 | SFML Ensemble Vertrauen | `sensor.sfml_ensemble_vertrauen_2` | `%` | card_ensemble_vertrauen |

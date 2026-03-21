@@ -18,7 +18,7 @@ header:
   show: true
   show_states: true
   colorize_states: true
-graph_span: 40d
+graph_span: 30d
 apex_config:
   chart:
     height: 280px

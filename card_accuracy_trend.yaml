@@ -2,6 +2,8 @@
 # SFML Monitor — Prognosegenauigkeit Trend (Line Chart)
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "Prognosegenauigkeit"
   show: true
@@ -11,9 +13,10 @@ graph_span: 30d
 apex_config:
   chart:
     height: 280px
+  legend:
+    show: false
   yaxis:
-    - min: 0
-      labels:
+    - labels:
         formatter: |
           EVAL:function(val) { return val + '%'; }
   tooltip:
@@ -25,10 +28,13 @@ series:
     name: "Ø Genauigkeit"
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
-      return data.map(d => [new Date(d.date).getTime(), d.accuracy]);
+      return data.map(d => [new Date(d.date).getTime(), d.accuracy])
+                 .sort(function(a, b) { return a[0] - b[0]; });
     color: "#4CAF50"
     stroke_width: 2
     type: line
     curve: smooth
+    extend_to: false
     show:
       in_header: raw
+      legend_value: false

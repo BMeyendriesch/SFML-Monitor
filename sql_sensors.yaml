@@ -275,6 +275,79 @@
   unit_of_measurement: "%"
   unique_id: sfml_gruppen_genauigkeit
 
+- name: "SFML KI Vorteil"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(physics_mae - ai_mae), 3) as state,
+      json_group_array(json_object(
+        'date', target_date,
+        'physics_mae', physics_mae,
+        'ai_mae', ai_mae,
+        'blend_mae', blend_mae,
+        'stunden', stunden
+      )) as chart_data
+    FROM (
+      SELECT target_date,
+        ROUND(AVG(ABS(actual_kwh - physics_kwh)), 3) as physics_mae,
+        ROUND(AVG(ABS(actual_kwh - ai_kwh)), 3) as ai_mae,
+        ROUND(AVG(ABS(actual_kwh - prediction_kwh)), 3) as blend_mae,
+        COUNT(*) as stunden
+      FROM hourly_predictions
+      WHERE is_production_hour = 1 AND actual_kwh > 0.01
+        AND physics_kwh IS NOT NULL AND ai_kwh IS NOT NULL
+      GROUP BY target_date
+      ORDER BY target_date
+    );
+  column: "state"
+  unit_of_measurement: "kWh"
+  unique_id: sfml_ki_vorteil
+
+- name: "SFML LSTM Tagesmetriken"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(ml_mae), 3) as state,
+      json_group_array(json_object(
+        'date', date,
+        'mae', ROUND(ml_mae, 3),
+        'rmse', ROUND(ml_rmse, 3),
+        'r2', ROUND(ml_r2_score, 3)
+      )) as chart_data
+    FROM (
+      SELECT date, ml_mae, ml_rmse, ml_r2_score
+      FROM daily_summaries
+      WHERE ml_rmse IS NOT NULL AND actual_total_kwh > 0.5
+      ORDER BY date
+    );
+  column: "state"
+  unit_of_measurement: "kWh"
+  unique_id: sfml_lstm_tagesmetriken
+
+- name: "SFML Ensemble Vertrauen"
+  db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
+  query: >-
+    SELECT
+      ROUND(AVG(lstm_weight * 100), 1) as state,
+      json_group_array(json_object(
+        'group', group_name,
+        'bucket', cloud_bucket || '/' || hour_bucket,
+        'lstm_w', ROUND(lstm_weight * 100, 1),
+        'ridge_w', ROUND(ridge_weight * 100, 1),
+        'lstm_mae', ROUND(lstm_mae, 4),
+        'ridge_mae', ROUND(ridge_mae, 4),
+        'samples', sample_count
+      )) as chart_data
+    FROM (
+      SELECT * FROM ensemble_group_weights
+      WHERE season = 'winter' AND cloud_bucket = 'overcast'
+      ORDER BY group_name,
+        CASE hour_bucket WHEN 'morning' THEN 1 WHEN 'midday' THEN 2 WHEN 'afternoon' THEN 3 END
+    );
+  column: "state"
+  unit_of_measurement: "%"
+  unique_id: sfml_ensemble_vertrauen
+
 - name: "SFML Experten Lernen"
   db_url: "sqlite:////config/solar_forecast_ml/solar_forecast.db"
   query: >-

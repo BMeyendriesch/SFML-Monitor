@@ -1,0 +1,104 @@
+# =============================================================================
+# SFML Monitor — Physik vs. KI — Täglicher MAE-Vergleich
+# =============================================================================
+# Zeitlicher Verlauf des mittleren absoluten Fehlers (MAE in kWh) für die drei
+# Vorhersagemethoden, berechnet aus hourly_predictions:
+#
+#   Physik-MAE  = Ø |actual_kwh − physics_kwh| pro Tag (graue Linie)
+#   KI-MAE      = Ø |actual_kwh − ai_kwh|     pro Tag (blaue Linie)
+#   Blend-MAE   = Ø |actual_kwh − prediction_kwh| pro Tag (grüne Linie)
+#
+# MAE ist eine absolute Fehlergröße in kWh, keine relative Kennzahl.
+# Niedrigere Werte = bessere Vorhersage.
+#
+# Entity-State = Ø (Physik-MAE − KI-MAE) über alle Tage in kWh:
+#   positiv → KI im Durchschnitt genauer als Physik
+#   negativ → Physik im Durchschnitt genauer als KI
+#
+# Benötigte Sensoren: sensor.sfml_ki_vorteil
+#   → state      = Ø (Physik-MAE − KI-MAE) in kWh
+#   → chart_data = JSON mit date/physics_mae/ai_mae/blend_mae/stunden
+# =============================================================================
+type: custom:apexcharts-card
+grid_options:
+  columns: full
+header:
+  title: "Physik vs. KI — Täglicher MAE-Vergleich"
+  show: true
+  show_states: true
+  colorize_states: true
+graph_span: 30d
+apex_config:
+  chart:
+    height: 300
+  legend:
+    show: true
+    position: bottom
+    fontSize: "11px"
+  yaxis:
+    - min: 0
+      title:
+        text: "MAE (kWh)"
+        style:
+          fontSize: "11px"
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(2) + ' kWh'; }
+  tooltip:
+    shared: true
+    x:
+      format: "dd.MM.yyyy"
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(3) + ' kWh';
+        }
+series:
+  # --- Physik-MAE (grau) ---
+  - entity: sensor.sfml_ki_vorteil
+    name: "Physik-MAE"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), d.physics_mae];
+      });
+    type: line
+    color: "#E53935"
+    stroke_width: 2
+    curve: smooth
+    unit: " kWh"
+    show:
+      in_header: false
+
+  # --- KI-MAE (blau) ---
+  - entity: sensor.sfml_ki_vorteil
+    name: "KI-MAE"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), d.ai_mae];
+      });
+    type: line
+    color: "#1E88E5"
+    stroke_width: 2
+    curve: smooth
+    unit: " kWh"
+    show:
+      in_header: false
+
+  # --- Blend-MAE (grün) — tatsächlich verwendete Vorhersage ---
+  - entity: sensor.sfml_ki_vorteil
+    name: "Blend-MAE"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), d.blend_mae];
+      });
+    type: line
+    color: "#43A047"
+    stroke_width: 2
+    curve: smooth
+    unit: " kWh"
+    show:
+      in_header: false

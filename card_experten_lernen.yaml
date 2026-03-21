@@ -8,11 +8,13 @@
 # Benötigte Sensoren: sensor.sfml_experten_lernen_2
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "Wetter-Experten Lernen"
   show: true
   show_states: false
-graph_span: 40d
+graph_span: 30d
 apex_config:
   chart:
     height: 280px

@@ -2,6 +2,8 @@
 # SFML Monitor — Methoden & Kalibrierung (Bar Charts)
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "Methoden-Vergleich & Kalibrierung"
   show: true

@@ -2,6 +2,8 @@
 # SFML Monitor — Vorhersage vs. Realität (Grouped Bar Chart)
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "Vorhersage vs. Realität"
   show: true

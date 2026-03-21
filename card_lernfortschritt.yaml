@@ -1,33 +1,21 @@
-# =============================================================================
-# SFML Monitor — Lernfortschritt (Multi-KPI Übersicht)
-# =============================================================================
-# Benötigte Sensoren:
-#   sensor.sfml_lernfortschritt_2
-#     → state = Ø Genauigkeit, attribute chart_data, attribute error_7d
-#   sensor.sfml_tagliche_genauigkeit_2
-#     → attribute chart_data mit predicted/actual für R²-Berechnung
-#   sensor.sfml_modell_status_2
-#     → attribute training_r2 (oder r2) = R² des Trainings
-# =============================================================================
 type: custom:apexcharts-card
 grid_options:
   columns: full
 header:
-  title: "SFML Lernfortschritt"
+  title: SFML Lernfortschritt
   show: true
   show_states: true
   colorize_states: true
-graph_span: 40d
+graph_span: 30d
 apex_config:
   chart:
     height: 320px
   legend:
     show: true
     position: bottom
-    fontSize: "11px"
+    fontSize: 11px
   yaxis:
-    # 0: Genauigkeit 7d-Ø (chart)
-    - seriesName: "Genauigkeit 7d-Ø"
+    - seriesName: Genauigkeit 7d-Ø
       min: 0
       max: 140
       tickAmount: 7
@@ -35,18 +23,16 @@ apex_config:
         formatter: |
           EVAL:function(val) { return val + '%'; }
       title:
-        text: "Genauigkeit / R² (%)"
+        text: Genauigkeit / R² (%)
         style:
           color: "#4CAF50"
-          fontSize: "12px"
-    # 1: R² 7d-Ø (chart) — gleiche Skala wie Genauigkeit
-    - seriesName: "R² 7d-Ø"
+          fontSize: 12px
+    - seriesName: R² 7d-Ø
       min: 0
       max: 140
       tickAmount: 7
       show: false
-    # 2: MAE 7d-Ø (chart) — rechte Achse
-    - seriesName: "MAE 7d-Ø"
+    - seriesName: MAE 7d-Ø
       opposite: true
       min: 0
       max: 12
@@ -55,13 +41,13 @@ apex_config:
         formatter: |
           EVAL:function(val) { return val.toFixed(1) + ' kWh'; }
       title:
-        text: "MAE (kWh)"
+        text: MAE (kWh)
         style:
           color: "#F44336"
-          fontSize: "12px"
+          fontSize: 12px
   tooltip:
     shared: true
-    y:
+    "y":
       formatter: |
         EVAL:function(val, { seriesIndex }) {
           if (val === null || val === undefined) return '';
@@ -70,11 +56,8 @@ apex_config:
           return val.toFixed(1);
         }
 series:
-  # === Chart-Serien (bestimmen die yaxis-Zuordnung) ===
-
-  # 0: Genauigkeit 7d-Ø (grün)
   - entity: sensor.sfml_lernfortschritt_2
-    name: "Genauigkeit 7d-Ø"
+    name: Genauigkeit 7d-Ø
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d, i) {
@@ -88,10 +71,8 @@ series:
     curve: smooth
     show:
       in_header: false
-
-  # 1: R² Live 7d-Ø (blau)
   - entity: sensor.sfml_tagliche_genauigkeit_2
-    name: "R² 7d-Ø"
+    name: R² 7d-Ø
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       data.sort(function(a, b) { return a.date < b.date ? -1 : 1; });
@@ -116,10 +97,8 @@ series:
     curve: smooth
     show:
       in_header: false
-
-  # 2: MAE 7d-Ø (rot)
   - entity: sensor.sfml_lernfortschritt_2
-    name: "MAE 7d-Ø"
+    name: MAE 7d-Ø
     data_generator: |
       var data = JSON.parse(entity.attributes.chart_data);
       return data.map(function(d, i) {
@@ -133,33 +112,26 @@ series:
     stroke_width: 3
     type: line
     curve: smooth
+    unit: " kWh"
     show:
       in_header: false
-
-  # === Header-only Serien ===
-
-  # 3: Genauigkeit Header (state = Ø Genauigkeit)
   - entity: sensor.sfml_lernfortschritt_2
-    name: "Genauigkeit"
+    name: Genauigkeit
     color: "#4CAF50"
     unit: " %"
     show:
       in_header: raw
       in_chart: false
-
-  # 4: R² Training Header
   - entity: sensor.sfml_modell_status_2
-    name: "R² Training"
+    name: R² Training
     attribute: r2
     color: "#FF9800"
     unit: " %"
     show:
       in_header: raw
       in_chart: false
-
-  # 5: MAE Header (aus Attribut error_7d)
   - entity: sensor.sfml_lernfortschritt_2
-    name: "MAE"
+    name: MAE
     attribute: error_7d
     color: "#F44336"
     unit: " kWh"

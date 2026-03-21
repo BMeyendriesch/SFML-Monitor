@@ -1,0 +1,58 @@
+# =============================================================================
+# SFML Monitor — LSTM-Lernmetriken
+# =============================================================================
+# R²-Score täglich (geclampt auf [-1, 1]):
+#   1 = perfekt, 0 = wie Mittelwert, < 0 = schlechter als Mittelwert
+#   Extreme Negativwerte erscheinen am Achsenboden;
+#   Tooltip zeigt den echten Wert.
+#
+# Benötigte Sensoren: sensor.sfml_lstm_tagesmetriken
+#   → chart_data = JSON mit date/mae/rmse/r2
+# =============================================================================
+type: custom:apexcharts-card
+grid_options:
+  columns: full
+header:
+  title: "LSTM-Lernmetriken"
+  show: true
+graph_span: 30d
+apex_config:
+  chart:
+    height: 320
+  legend:
+    show: false
+  yaxis:
+    - min: -1
+      max: 1
+      title:
+        text: "R²-Score"
+        style:
+          fontSize: "11px"
+      labels:
+        formatter: |
+          EVAL:function(val) { return val.toFixed(2); }
+  tooltip:
+    shared: true
+    x:
+      format: "dd.MM.yyyy"
+    y:
+      formatter: |
+        EVAL:function(val) {
+          if (val === null || val === undefined) return '';
+          return val.toFixed(3);
+        }
+series:
+  - entity: sensor.sfml_lstm_tagesmetriken
+    name: "R²-Score"
+    data_generator: |
+      var data = JSON.parse(entity.attributes.chart_data);
+      return data.map(function(d) {
+        return [new Date(d.date).getTime(), Math.max(-1, Math.min(1, d.r2))];
+      });
+    type: line
+    color: "#43A047"
+    stroke_width: 2
+    curve: smooth
+    show:
+      in_header: false
+      legend_value: false

@@ -2,6 +2,8 @@
 # SFML Monitor — Wetter-Experten Performance (Horizontal Bar Chart)
 # =============================================================================
 type: custom:apexcharts-card
+grid_options:
+  columns: full
 header:
   title: "Wetter-Experten Gewichtung"
   show: true
